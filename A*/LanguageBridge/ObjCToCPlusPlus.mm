@@ -16,7 +16,10 @@
 #include <iostream>
 
 #pragma mark - ScreenPositionObjC
-@interface ScreenPositionObjC(Wrapped)
+@interface ScreenPositionObjC()
+{
+    AStar::ScreenPosition _screenPosition;
+}
 
 - (AStar::ScreenPosition)screenPosition;
 
@@ -24,13 +27,11 @@
 
 @implementation ScreenPositionObjC
 
-AStar::ScreenPosition screenPosition;
-
 - (instancetype)initWithX:(CGFloat)x y:(CGFloat)y
 {
     if (self = [super init])
     {
-        screenPosition.set((float)x, (float)y);
+        _screenPosition.set((float)x, (float)y);
     }
     
     return self;
@@ -38,23 +39,26 @@ AStar::ScreenPosition screenPosition;
 
 - (CGFloat)x
 {
-    return (CGFloat)screenPosition.x;
+    return (CGFloat)_screenPosition.x;
 }
 
 - (CGFloat)y
 {
-    return (CGFloat)screenPosition.y;
+    return (CGFloat)_screenPosition.y;
 }
 
 - (AStar::ScreenPosition)screenPosition
 {
-    return screenPosition;
+    return _screenPosition;
 }
 
 @end
 
 #pragma mark - GraphPositionObjC
-@interface GraphPositionObjC(Wrapped)
+@interface GraphPositionObjC()
+{
+    AStar::GraphPosition _graphPosition;
+}
 
 - (AStar::GraphPosition)graphPosition;
 
@@ -62,13 +66,11 @@ AStar::ScreenPosition screenPosition;
 
 @implementation GraphPositionObjC
 
-AStar::GraphPosition graphPosition;
-
 - (instancetype)initWithX:(NSInteger)x y:(NSInteger)y
 {
     if (self = [super init])
     {
-        graphPosition.set((int)x, (int)y);
+        _graphPosition.set((int)x, (int)y);
     }
     
     return self;
@@ -76,23 +78,26 @@ AStar::GraphPosition graphPosition;
 
 - (NSInteger)x
 {
-    return (NSInteger)graphPosition.x;
+    return (NSInteger)_graphPosition.x;
 }
 
 - (NSInteger)y
 {
-    return (NSInteger)graphPosition.y;
+    return (NSInteger)_graphPosition.y;
 }
 
 - (AStar::GraphPosition)graphPosition
 {
-    return graphPosition;
+    return _graphPosition;
 }
 
 @end
 
 #pragma mark - GraphObjC
 @interface GraphObjC()
+{
+    AStar::Graph* _graph;
+}
 
 - (AStar::Graph*)graph;
 
@@ -100,13 +105,11 @@ AStar::GraphPosition graphPosition;
 
 @implementation GraphObjC
 
-AStar::Graph* graph;
-
 - (instancetype)initWithWidth:(NSInteger)width height:(NSInteger)height
 {
     if (self = [super init])
     {
-        graph = new AStar::Graph((int)width, (int)height);
+        _graph = new AStar::Graph((int)width, (int)height);
     }
     
     return self;
@@ -114,56 +117,61 @@ AStar::Graph* graph;
 
 - (void)dealloc
 {
-    delete graph;
+    delete _graph;
 }
 
 - (NSInteger)width
 {
-    return graph->getWidth();
+    return _graph->getWidth();
 }
 
 - (NSInteger)height
 {
-    return graph->getHeight();
+    return _graph->getHeight();
 }
 
 - (BOOL)isPositionWalkableAtX:(NSInteger)x y:(NSInteger)y;
 {
-    return graph->isPositionWalkable((int)x, (int)y);
+    return _graph->isPositionWalkable((int)x, (int)y);
 }
 
 - (void)markPositionAsNonWalkableAtX:(NSInteger)x y:(NSInteger)y;
 {
-    graph->markPositionAsNonWalkable((int)x, (int)y);
+    _graph->markPositionAsNonWalkable((int)x, (int)y);
 }
 
 - (void)unmarkPositionAsNonWalkableAtX:(NSInteger)x y:(NSInteger)y;
 {
-    graph->unmarkPositionAsNonWalkable((int)x, (int)y);
+    _graph->unmarkPositionAsNonWalkable((int)x, (int)y);
 }
 
 - (BOOL)isPositionValidAtX:(NSInteger)x y:(NSInteger)y;
 {
-    return graph->isPositionValid((int)x, (int)y);
+    return _graph->isPositionValid((int)x, (int)y);
 }
 
 - (AStar::Graph*)graph
 {
-    return graph;
+    return _graph;
 }
 
 @end
 
 #pragma mark - PathFinderObjC
-@implementation PathFinderObjC
+@interface PathFinderObjC()
+{
+    AStar::PathFinder* _pathFinder;
+}
 
-AStar::PathFinder* pathFinder;
+@end
+
+@implementation PathFinderObjC
 
 - (instancetype)initWithGraph:(GraphObjC*)graphObjC
 {
     if (self = [super init])
     {
-        pathFinder = new AStar::PathFinder(*([graphObjC graph]));
+        _pathFinder = new AStar::PathFinder(*([graphObjC graph]));
     }
     
     return self;
@@ -171,13 +179,13 @@ AStar::PathFinder* pathFinder;
 
 - (void)dealloc
 {
-    delete pathFinder;
+    delete _pathFinder;
 }
 
 - (BOOL)findPathWaypointsWithOrigin:(GraphPositionObjC*)origin destination:(GraphPositionObjC*)destination result:(NSMutableArray*)outWaypoints
 {
     std::vector<AStar::GraphPosition> realOutWaypoints;
-    bool result = pathFinder->findPathWaypoints(origin.graphPosition, destination.graphPosition, realOutWaypoints);
+    bool result = _pathFinder->findPathWaypoints(origin.graphPosition, destination.graphPosition, realOutWaypoints);
     
     if (result)
     {
@@ -196,30 +204,35 @@ AStar::PathFinder* pathFinder;
 
 
 #pragma mark - PositionConverterObjC
-@implementation PositionConverterObjC
+@interface PositionConverterObjC()
+{
+    AStar::PositionConverter _positionConverter;
+}
 
-AStar::PositionConverter positionConverter;
+@end
+
+@implementation PositionConverterObjC
 
 - (void)setGraphSizeWithWidth:(NSInteger)width height:(NSInteger)height
 {
-    positionConverter.setGraphSize((int)width, (int)height);
+    _positionConverter.setGraphSize((int)width, (int)height);
 }
 
 - (void)setScreenSizeWithWidth:(CGFloat)width height:(CGFloat)height
 {
-    positionConverter.setScreenSize((float)width, (float)height);
+    _positionConverter.setScreenSize((float)width, (float)height);
 }
 
 - (GraphPositionObjC*)graphPositionFromScreenPosition:(ScreenPositionObjC*)screenPosition
 {
-    AStar::GraphPosition pos = positionConverter.graphPositionFromScreenPosition([screenPosition screenPosition]);
+    AStar::GraphPosition pos = _positionConverter.graphPositionFromScreenPosition([screenPosition screenPosition]);
     GraphPositionObjC* result = [[GraphPositionObjC alloc] initWithX:pos.x y:pos.y];
     return result;
 }
 
 - (ScreenPositionObjC*)screenPositionFromGraphPosition:(GraphPositionObjC*)graphPosition
 {
-    AStar::ScreenPosition pos = positionConverter.screenPositionFromGraphPosition([graphPosition graphPosition]);
+    AStar::ScreenPosition pos = _positionConverter.screenPositionFromGraphPosition([graphPosition graphPosition]);
     return [[ScreenPositionObjC alloc] initWithX:pos.x y:pos.y];
 }
 

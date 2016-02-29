@@ -12,69 +12,85 @@ class GraphView: NSView {
     
     var graph: GraphObjC
     var pathFinder: PathFinderObjC
-    var positionConverter : PositionConverterObjC;
+    var positionConverter : PositionConverterObjC
+    
+    enum PathSearchState
+    {
+        case eOrigin
+        case eDestination
+        case eDone
+    }
+    
+    var pathSearchState : PathSearchState
+    var originPosition : GraphPositionObjC
+    var destinationPosition : GraphPositionObjC
+    var path : NSMutableArray
 
     override init(frame frameRect: NSRect) {
         
-        self.graph = GraphObjC(width: 25, height: 25)
-        self.pathFinder = PathFinderObjC(graph: graph)
-        self.positionConverter = PositionConverterObjC();
+        graph = GraphObjC(width: 25, height: 25)
+        pathFinder = PathFinderObjC(graph: graph)
+        positionConverter = PositionConverterObjC()
+        pathSearchState = PathSearchState.eOrigin
+        originPosition = GraphPositionObjC()
+        destinationPosition = GraphPositionObjC()
+        path = NSMutableArray()
         
         super.init(frame: frameRect);
         
-        self.positionConverter.setGraphSizeWithWidth(self.graph.width(), height:self.graph.height())
-        self.positionConverter.setScreenSizeWithWidth(frame.size.width, height:frame.size.height)
+        positionConverter.setGraphSizeWithWidth(graph.width(), height:graph.height())
+        positionConverter.setScreenSizeWithWidth(frame.size.width, height:frame.size.height)
     }
 
     required init?(coder: NSCoder) {
         
-        self.graph = GraphObjC(width: 25, height: 25)
-        self.pathFinder = PathFinderObjC(graph: self.graph)
-        
-        self.positionConverter = PositionConverterObjC();
+        graph = GraphObjC(width: 25, height: 25)
+        pathFinder = PathFinderObjC(graph: graph)
+        positionConverter = PositionConverterObjC()
+        pathSearchState = PathSearchState.eOrigin
+        originPosition = GraphPositionObjC()
+        destinationPosition = GraphPositionObjC()
+        path = NSMutableArray()
         
         super.init(coder: coder)
         
-        self.positionConverter.setGraphSizeWithWidth(self.graph.width(), height:self.graph.height())
-        self.positionConverter.setScreenSizeWithWidth(frame.size.width, height:frame.size.height)
+        positionConverter.setGraphSizeWithWidth(graph.width(), height:graph.height())
+        positionConverter.setScreenSizeWithWidth(frame.size.width, height:frame.size.height)
     }
     
     override func drawRect(dirtyRect: NSRect) {
         super.drawRect(dirtyRect)
 
-        NSLog("Redrawing");
-        
         let context = NSGraphicsContext.currentContext()?.CGContext
         CGContextClearRect(context, dirtyRect)
-        CGContextSetFillColorWithColor(context, NSColor.yellowColor().CGColor)
+        CGContextSetFillColorWithColor(context, NSColor.whiteColor().CGColor)
         CGContextFillRect(context, dirtyRect)
         
         CGContextSetStrokeColorWithColor(context, NSColor.redColor().CGColor)
         
-        let cellsWidth : CGFloat = (dirtyRect.size.width / CGFloat(self.graph.width()));
-        let cellsHeight : CGFloat = (dirtyRect.size.height / CGFloat(self.graph.height()));
+        let cellsWidth : CGFloat = (dirtyRect.size.width / CGFloat(graph.width()))
+        let cellsHeight : CGFloat = (dirtyRect.size.height / CGFloat(graph.height()))
         
-        for (var i=0; i<self.graph.width(); ++i)
+        for (var i=0; i<graph.width(); ++i)
         {
             CGContextMoveToPoint(context, CGFloat(i)*cellsWidth, 0);
-            CGContextAddLineToPoint(context, CGFloat(i)*cellsWidth, dirtyRect.size.height);
+            CGContextAddLineToPoint(context, CGFloat(i)*cellsWidth, dirtyRect.size.height)
             CGContextStrokePath(context)
         }
         
-        for (var j=0; j<self.graph.height(); ++j)
+        for (var j=0; j<graph.height(); ++j)
         {
             CGContextMoveToPoint(context, 0, CGFloat(j)*cellsHeight);
-            CGContextAddLineToPoint(context, dirtyRect.size.width, CGFloat(j)*cellsHeight);
+            CGContextAddLineToPoint(context, dirtyRect.size.width, CGFloat(j)*cellsHeight)
             CGContextStrokePath(context)
         }
         
         CGContextSetFillColorWithColor(context, NSColor.greenColor().CGColor)
-        
-        for (var i=0; i<self.graph.width(); ++i)
+        for (var i=0; i<graph.width(); ++i)
         {
-            for (var j=0; j<self.graph.height(); ++j)
+            for (var j=0; j<graph.height(); ++j)
             {
-                if (!self.graph.isPositionWalkableAtX(i, y:j))
+                if (!graph.isPositionWalkableAtX(i, y:j))
                 {
                     CGContextAddRect(context, CGRectMake(CGFloat(i)*cellsWidth, CGFloat(j)*cellsHeight, cellsWidth, cellsHeight));
                     CGContextDrawPath(context, .FillStroke)
@@ -82,22 +98,64 @@ class GraphView: NSView {
             }
         }
         
-        self.positionConverter.setScreenSizeWithWidth(dirtyRect.size.width, height:dirtyRect.size.height)
+        CGContextSetFillColorWithColor(context, NSColor.blackColor().CGColor)
+        if (pathSearchState == PathSearchState.eDone)
+        {
+            for waypointObj in path
+            {
+                let waypoint : GraphPositionObjC = waypointObj as! GraphPositionObjC
+                CGContextAddRect(context, CGRectMake(CGFloat(waypoint.x())*cellsWidth, CGFloat(waypoint.y())*cellsHeight, cellsWidth, cellsHeight))
+                CGContextDrawPath(context, .FillStroke)
+            }
+        }
+        
+        CGContextSetFillColorWithColor(context, NSColor.purpleColor().CGColor)
+        if (pathSearchState != PathSearchState.eOrigin)
+        {
+            CGContextAddRect(context, CGRectMake(CGFloat(originPosition.x())*cellsWidth, CGFloat(originPosition.y())*cellsHeight, cellsWidth, cellsHeight))
+            CGContextDrawPath(context, .FillStroke)
+        }
+        
+        if (pathSearchState == PathSearchState.eDone)
+        {
+            CGContextAddRect(context, CGRectMake(CGFloat(destinationPosition.x())*cellsWidth, CGFloat(destinationPosition.y())*cellsHeight, cellsWidth, cellsHeight))
+            CGContextDrawPath(context, .FillStroke)
+        }
+        
+        positionConverter.setScreenSizeWithWidth(dirtyRect.size.width, height:dirtyRect.size.height)
     }
     
     override func mouseUp(theEvent: NSEvent) {
-        let position : NSPoint = self.convertPoint(theEvent.locationInWindow, fromView: nil);
+        let position : NSPoint = convertPoint(theEvent.locationInWindow, fromView: nil);
         let screenPosition : ScreenPositionObjC = ScreenPositionObjC(x: position.x, y: position.y);
-        let graphPosition : GraphPositionObjC = self.positionConverter.graphPositionFromScreenPosition(screenPosition);
+        let graphPosition : GraphPositionObjC = positionConverter.graphPositionFromScreenPosition(screenPosition);
         
-        if (self.graph.isPositionWalkableAtX(graphPosition.x(), y: graphPosition.y()))
+        if (theEvent.modifierFlags.contains(NSEventModifierFlags.CommandKeyMask))
         {
-            self.graph.markPositionAsNonWalkableAtX(graphPosition.x(), y: graphPosition.y());
+            if (graph.isPositionWalkableAtX(graphPosition.x(), y: graphPosition.y()))
+            {
+                graph.markPositionAsNonWalkableAtX(graphPosition.x(), y: graphPosition.y())
+            } else
+            {
+                graph.unmarkPositionAsNonWalkableAtX(graphPosition.x(), y: graphPosition.y())
+            }
         } else
         {
-            self.graph.unmarkPositionAsNonWalkableAtX(graphPosition.x(), y: graphPosition.y());
+            if ((pathSearchState == PathSearchState.eDestination))
+            {
+                destinationPosition = GraphPositionObjC(x: graphPosition.x(), y: graphPosition.y())
+                path.removeAllObjects()
+                pathFinder.findPathWaypointsWithOrigin(originPosition, destination: destinationPosition, result: path)
+                pathSearchState = PathSearchState.eDone
+            } else
+            {
+                path.removeAllObjects()
+                originPosition = GraphPositionObjC(x: graphPosition.x(), y: graphPosition.y())
+                pathSearchState = PathSearchState.eDestination
+            }
         }
         
-        self.setNeedsDisplayInRect(self.frame);
+        setNeedsDisplayInRect(frame)
     }
+    
 }

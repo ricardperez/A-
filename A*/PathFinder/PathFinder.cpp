@@ -24,10 +24,10 @@ namespace AStar
         std::set<GraphPosition> openSet = {origin};
         std::map<GraphPosition, GraphPosition> cameFrom;
         
-        std::map<GraphPosition, int> gScore;
+        std::map<GraphPosition, float> gScore;
         gScore[origin] = 0;
         
-        std::map<GraphPosition, int> fScore;
+        std::map<GraphPosition, float> fScore;
         fScore[origin] = origin.dist(destination);
         
         while (!openSet.empty())
@@ -58,15 +58,16 @@ namespace AStar
             openSet.erase(*current);
             closedSet.insert(*current);
             
-            auto neighbors = getNeighbors(*current);
-            for (auto& neighbor : neighbors)
+            auto neighborsWithWeights = getNeighbors(*current);
+            for (auto& neighborWithWeight : neighborsWithWeights)
             {
+                auto& neighbor = neighborWithWeight.first;
                 if (closedSet.find(neighbor) != closedSet.end())
                 {
                     continue;
                 }
                 
-                int tentativeGScore = gScore[*current] + 1;
+                float tentativeGScore = gScore[*current] + neighborWithWeight.second;
                 if (openSet.find(neighbor) == openSet.end())
                 {
                     openSet.insert(neighbor);
@@ -84,31 +85,31 @@ namespace AStar
         return false;
     }
     
-    std::vector<GraphPosition> PathFinder::getNeighbors(const GraphPosition& position) const
+    std::vector<std::pair<GraphPosition, float>> PathFinder::getNeighbors(const GraphPosition& position) const
     {
-        std::vector<GraphPosition> result;
+        std::vector<std::pair<GraphPosition, float>> result;
         
-        auto addIfCorrect = [&](int dx, int dy) -> void
+        auto addIfCorrect = [&](int dx, int dy, float weight) -> void
         {
             GraphPosition neighbor = position;
             neighbor.x += dx;
             neighbor.y += dy;
             
-            if (graph->isPositionValid(neighbor.x, neighbor.y) && graph->isPositionValid(neighbor.x, neighbor.y))
+            if (graph->isPositionValid(neighbor.x, neighbor.y) && graph->isPositionWalkable(neighbor.x, neighbor.y))
             {
-                result.push_back(neighbor);
+                result.push_back(std::make_pair(neighbor, weight));
             }
             
         };
         
-        addIfCorrect(1,0);
-        addIfCorrect(1,1);
-        addIfCorrect(0,1);
-        addIfCorrect(-1,1);
-        addIfCorrect(-1,0);
-        addIfCorrect(-1,-1);
-        addIfCorrect(0,-1);
-        addIfCorrect(1,-1);
+        addIfCorrect(1,0, 1.0f);
+        addIfCorrect(1,1, 1.4142f);
+        addIfCorrect(0,1, 1.0f);
+        addIfCorrect(-1,1, 1.4142f);
+        addIfCorrect(-1,0, 1.0f);
+        addIfCorrect(-1,-1, 1.4142f);
+        addIfCorrect(0,-1, 1.0f);
+        addIfCorrect(1,-1, 1.4142f);
         
         return result;
     }

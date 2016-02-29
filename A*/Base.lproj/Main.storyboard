@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<document type="com.apple.InterfaceBuilder3.Cocoa.Storyboard.XIB" version="3.0" toolsVersion="9532" systemVersion="15D21" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none" useAutolayout="YES" initialViewController="B8D-0N-5wS">
+<document type="com.apple.InterfaceBuilder3.Cocoa.Storyboard.XIB" version="3.0" toolsVersion="9531" systemVersion="15C50" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none" useAutolayout="YES" initialViewController="B8D-0N-5wS">
     <dependencies>
         <deployment identifier="macosx"/>
-        <plugIn identifier="com.apple.InterfaceBuilder.CocoaPlugin" version="9532"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.CocoaPlugin" version="9531"/>
     </dependencies>
     <scenes>
         <!--Application-->
@@ -676,12 +676,25 @@
                             <customView translatesAutoresizingMaskIntoConstraints="NO" id="hro-P9-61d" customClass="GraphView" customModule="A_" customModuleProvider="target">
                                 <rect key="frame" x="0.0" y="0.0" width="480" height="270"/>
                             </customView>
+                            <textField horizontalHuggingPriority="251" verticalHuggingPriority="750" misplaced="YES" translatesAutoresizingMaskIntoConstraints="NO" id="xfi-v3-W8N">
+                                <rect key="frame" x="-2" y="236" width="484" height="34"/>
+                                <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" sendsActionOnEndEditing="YES" alignment="center" id="9BC-KH-EEf">
+                                    <font key="font" metaFont="system" size="10"/>
+                                    <string key="title">Click to find path
+Command+Click to create blocks</string>
+                                    <color key="textColor" name="headerColor" catalog="System" colorSpace="catalog"/>
+                                    <color key="backgroundColor" name="controlColor" catalog="System" colorSpace="catalog"/>
+                                </textFieldCell>
+                            </textField>
                         </subviews>
                         <constraints>
+                            <constraint firstItem="xfi-v3-W8N" firstAttribute="top" secondItem="m2S-Jp-Qdl" secondAttribute="top" id="NDk-XC-gaw"/>
                             <constraint firstItem="hro-P9-61d" firstAttribute="leading" secondItem="m2S-Jp-Qdl" secondAttribute="leading" id="VZp-Sl-eGT"/>
+                            <constraint firstAttribute="trailing" secondItem="xfi-v3-W8N" secondAttribute="trailing" id="kfv-T9-xBp"/>
                             <constraint firstAttribute="trailing" secondItem="hro-P9-61d" secondAttribute="trailing" id="qhB-jd-YZE"/>
                             <constraint firstItem="hro-P9-61d" firstAttribute="top" secondItem="m2S-Jp-Qdl" secondAttribute="top" id="t0K-j1-yzZ"/>
                             <constraint firstAttribute="bottom" secondItem="hro-P9-61d" secondAttribute="bottom" id="viP-54-8cV"/>
+                            <constraint firstItem="xfi-v3-W8N" firstAttribute="leading" secondItem="m2S-Jp-Qdl" secondAttribute="leading" id="xck-P0-09o"/>
                         </constraints>
                     </view>
                 </viewController>

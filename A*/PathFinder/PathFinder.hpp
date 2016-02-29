@@ -24,7 +24,7 @@ namespace AStar
         bool findPathWaypoints(const GraphPosition& origin, const GraphPosition& destination, std::vector<GraphPosition>& outWaypoints);
         
     private:
-        std::vector<GraphPosition> getNeighbors(const GraphPosition& position) const;
+        std::vector<std::pair<GraphPosition, float>> getNeighbors(const GraphPosition& position) const;
         void reconstructPath(const std::map<GraphPosition, GraphPosition>& cameFrom, const GraphPosition& current, std::vector<GraphPosition>& outWaypoints) const;
         
     private:

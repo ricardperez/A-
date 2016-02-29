@@ -10,10 +10,6 @@ import Cocoa
 
 class GraphView: NSView {
     
-    var graph: GraphObjC
-    var pathFinder: PathFinderObjC
-    var positionConverter : PositionConverterObjC
-    
     enum PathSearchState
     {
         case eOrigin
@@ -21,10 +17,22 @@ class GraphView: NSView {
         case eDone
     }
     
+    enum MouseState
+    {
+        case eWaypoints
+        case eCreatingWalls
+        case eClearingWalls
+    }
+    
+    var graph: GraphObjC
+    var pathFinder: PathFinderObjC
+    var positionConverter : PositionConverterObjC
     var pathSearchState : PathSearchState
     var originPosition : GraphPositionObjC
     var destinationPosition : GraphPositionObjC
     var path : NSMutableArray
+    var mouseState : MouseState
+    var mouseActive : Bool
 
     override init(frame frameRect: NSRect) {
         
@@ -35,6 +43,8 @@ class GraphView: NSView {
         originPosition = GraphPositionObjC()
         destinationPosition = GraphPositionObjC()
         path = NSMutableArray()
+        mouseState = MouseState.eWaypoints
+        mouseActive = false
         
         super.init(frame: frameRect);
         
@@ -51,6 +61,8 @@ class GraphView: NSView {
         originPosition = GraphPositionObjC()
         destinationPosition = GraphPositionObjC()
         path = NSMutableArray()
+        mouseState = MouseState.eWaypoints
+        mouseActive = false
         
         super.init(coder: coder)
         
@@ -104,7 +116,7 @@ class GraphView: NSView {
             for waypointObj in path
             {
                 let waypoint : GraphPositionObjC = waypointObj as! GraphPositionObjC
-                CGContextAddRect(context, CGRectMake(CGFloat(waypoint.x())*cellsWidth, CGFloat(waypoint.y())*cellsHeight, cellsWidth, cellsHeight))
+                CGContextAddRect(context, getCellRect(waypoint.x(), y: waypoint.y(), width: cellsWidth, height: cellsHeight, scale: 0.65))
                 CGContextDrawPath(context, .FillStroke)
             }
         }
@@ -112,50 +124,155 @@ class GraphView: NSView {
         CGContextSetFillColorWithColor(context, NSColor.purpleColor().CGColor)
         if (pathSearchState != PathSearchState.eOrigin)
         {
-            CGContextAddRect(context, CGRectMake(CGFloat(originPosition.x())*cellsWidth, CGFloat(originPosition.y())*cellsHeight, cellsWidth, cellsHeight))
+            CGContextAddRect(context, getCellRect(originPosition.x(), y: originPosition.y(), width: cellsWidth, height: cellsHeight, scale: 1.0))
             CGContextDrawPath(context, .FillStroke)
         }
         
         if (pathSearchState == PathSearchState.eDone)
         {
-            CGContextAddRect(context, CGRectMake(CGFloat(destinationPosition.x())*cellsWidth, CGFloat(destinationPosition.y())*cellsHeight, cellsWidth, cellsHeight))
+            CGContextAddRect(context, getCellRect(destinationPosition.x(), y: destinationPosition.y(), width: cellsWidth, height: cellsHeight, scale: 1.0))
             CGContextDrawPath(context, .FillStroke)
         }
         
         positionConverter.setScreenSizeWithWidth(dirtyRect.size.width, height:dirtyRect.size.height)
     }
     
-    override func mouseUp(theEvent: NSEvent) {
+    func getCellRect(x: Int, y: Int, width: CGFloat, height: CGFloat, scale: CGFloat) -> CGRect
+    {
+        let offsetX : CGFloat = (CGFloat(x) * width + (width*(0.5 - scale/2.0)))
+        let offsetY : CGFloat = (CGFloat(y) * height + (height*(0.5 - scale/2.0)))
+        
+        return CGRect(x: offsetX, y: offsetY, width: width*scale, height: height*scale);
+    }
+    
+    override func mouseUp(theEvent: NSEvent)
+    {
+        if (mouseActive)
+        {
+            handleMouseEvent(theEvent);
+        }
+        
+        mouseState = MouseState.eWaypoints
+        mouseActive = false
+        
+        super.mouseUp(theEvent)
+    }
+    
+    override func mouseDown(theEvent: NSEvent)
+    {
+        mouseActive = true
+        if (theEvent.modifierFlags.contains(NSEventModifierFlags.CommandKeyMask))
+        {
+            let graphPosition: GraphPositionObjC = graphPositionFromMouseEvent(theEvent);
+            if (graph.isPositionWalkableAtX(graphPosition.x(), y: graphPosition.y()))
+            {
+                mouseState = MouseState.eCreatingWalls
+            } else
+            {
+                mouseState = MouseState.eClearingWalls
+            }
+        } else
+        {
+            mouseState = MouseState.eWaypoints
+        }
+        
+        super.mouseDown(theEvent)
+    }
+    
+    override func mouseMoved(theEvent: NSEvent)
+    {
+        if (mouseActive && ((mouseState == MouseState.eCreatingWalls) || (mouseState == MouseState.eClearingWalls)))
+        {
+            handleMouseEvent(theEvent)
+        }
+        
+        super.mouseMoved(theEvent)
+    }
+    
+    override func mouseDragged(theEvent: NSEvent)
+    {
+        if (mouseActive && ((mouseState == MouseState.eCreatingWalls) || (mouseState == MouseState.eClearingWalls)))
+        {
+            handleMouseEvent(theEvent)
+        }
+        super.mouseDragged(theEvent)
+    }
+    
+    func handleMouseEvent(theEvent: NSEvent)
+    {
+        if (mouseState == MouseState.eWaypoints)
+        {
+            handleMouseEventWaypoints(theEvent)
+        } else
+        {
+            if (theEvent.modifierFlags.contains(NSEventModifierFlags.CommandKeyMask))
+            {
+                handleMouseEventWalls(theEvent)
+            }
+            else
+            {
+                mouseActive = false
+                mouseState = MouseState.eWaypoints
+            }
+        }
+        
+        setNeedsDisplayInRect(frame);
+    }
+    
+    func handleMouseEventWaypoints(theEvent: NSEvent)
+    {
+        let graphPosition : GraphPositionObjC = graphPositionFromMouseEvent(theEvent);
+        
+        if ((pathSearchState == PathSearchState.eDestination))
+        {
+            destinationPosition = GraphPositionObjC(x: graphPosition.x(), y: graphPosition.y())
+            path.removeAllObjects()
+            if (!pathFinder.findPathWaypointsWithOrigin(originPosition, destination: destinationPosition, result: path))
+            {
+                path.removeAllObjects()
+            }
+            pathSearchState = PathSearchState.eDone
+        } else
+        {
+            path.removeAllObjects()
+            originPosition = GraphPositionObjC(x: graphPosition.x(), y: graphPosition.y())
+            pathSearchState = PathSearchState.eDestination
+        }
+    }
+    
+    func handleMouseEventWalls(theEvent: NSEvent)
+    {
+        let graphPosition : GraphPositionObjC = graphPositionFromMouseEvent(theEvent);
+        let wallExists : Bool = !(graph.isPositionWalkableAtX(graphPosition.x(), y: graphPosition.y()))
+        var changesMade : Bool = false
+        
+        if ((mouseState == MouseState.eCreatingWalls) && !wallExists)
+        {
+            graph.markPositionAsNonWalkableAtX(graphPosition.x(), y: graphPosition.y())
+            changesMade = true
+        } else if ((mouseState == MouseState.eClearingWalls) && wallExists)
+        {
+            graph.unmarkPositionAsNonWalkableAtX(graphPosition.x(), y: graphPosition.y())
+            changesMade = true
+        }
+        
+        if (changesMade && (pathSearchState == PathSearchState.eDone))
+        {
+            path.removeAllObjects()
+            if (!pathFinder.findPathWaypointsWithOrigin(originPosition, destination: destinationPosition, result: path))
+            {
+                path.removeAllObjects()
+            }
+        }
+    }
+    
+    func graphPositionFromMouseEvent(theEvent: NSEvent) -> GraphPositionObjC
+    {
         let position : NSPoint = convertPoint(theEvent.locationInWindow, fromView: nil);
         let screenPosition : ScreenPositionObjC = ScreenPositionObjC(x: position.x, y: position.y);
         let graphPosition : GraphPositionObjC = positionConverter.graphPositionFromScreenPosition(screenPosition);
         
-        if (theEvent.modifierFlags.contains(NSEventModifierFlags.CommandKeyMask))
-        {
-            if (graph.isPositionWalkableAtX(graphPosition.x(), y: graphPosition.y()))
-            {
-                graph.markPositionAsNonWalkableAtX(graphPosition.x(), y: graphPosition.y())
-            } else
-            {
-                graph.unmarkPositionAsNonWalkableAtX(graphPosition.x(), y: graphPosition.y())
-            }
-        } else
-        {
-            if ((pathSearchState == PathSearchState.eDestination))
-            {
-                destinationPosition = GraphPositionObjC(x: graphPosition.x(), y: graphPosition.y())
-                path.removeAllObjects()
-                pathFinder.findPathWaypointsWithOrigin(originPosition, destination: destinationPosition, result: path)
-                pathSearchState = PathSearchState.eDone
-            } else
-            {
-                path.removeAllObjects()
-                originPosition = GraphPositionObjC(x: graphPosition.x(), y: graphPosition.y())
-                pathSearchState = PathSearchState.eDestination
-            }
-        }
-        
-        setNeedsDisplayInRect(frame)
+        return graphPosition;
     }
     
 }

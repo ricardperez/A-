@@ -7,7 +7,6 @@
 //
 
 #include "Graph.hpp"
-#include <cassert>
 
 namespace AStar
 {
@@ -39,23 +38,28 @@ namespace AStar
     
     bool Graph::isPositionWalkable(int x, int y) const
     {
-        assert(isPositionValid(x, y));
+        if (isPositionValid(x, y))
+        {
+            return area[x][y];
+        }
         
-        return area[x][y];
+        return false;
     }
     
     void Graph::markPositionAsNonWalkable(int x, int y)
     {
-        assert(isPositionValid(x, y));
-        
-        area[x][y] = false;
+        if (isPositionValid(x, y))
+        {
+            area[x][y] = false;
+        }
     }
     
     void Graph::unmarkPositionAsNonWalkable(int x, int y)
     {
-        assert(isPositionValid(x, y));
-        
-        area[x][y] = true;
+        if (isPositionValid(x, y))
+        {
+            area[x][y] = true;
+        }
     }
     
     bool Graph::isPositionValid(int x, int y) const
